@@ -1,98 +1,51 @@
 <?php
+    require_once "config.php";
 
-require_once 'request.php';
-require_once 'model.php';
+    $datos = array();
+    $accion = "";
 
-//Definimos la codificación de caracteres en la cabecera.
-header('Content-Type: text/html; charset=utf-8');
-
-//configuracion de tabla
-$table = "contactos"; //nombre tabla
-
-//columnas
-$columnas = [
-    'id' => 'NULL',
-    'nombre' => 'NULL',
-    'telefono' => 'NULL'
-];
-
-//filtro para validaciones validaciones
-$filter = [
-    "id" => FILTER_SANITIZE_ENCODED,
-    "nombre" => [
-        'filter' => FILTER_SANITIZE_STRING,
-        'flags'  => FILTER_FLAG_STRIP_LOW,
-    ],
-    "telefono" => [
-        'filter' => FILTER_SANITIZE_STRING,
-        'flags'  => FILTER_FLAG_STRIP_LOW,
-    ]
-]; 
-
-//cargar datos
-if (isGet() and getParam("action") == "all") {
-    $json = array();
-
-    foreach (selectAll($table) as $contacto) {
-        $json["id"] = $contacto["id"];
-        $json["nombre"] = $contacto["nombre"];
-        $json["telefono"] = $contacto["telefono"];
+    if (isset($_POST["accion"])) {
+        $accion = $_POST["accion"];
     }
-    
-    echo json_encode($json);
-}
 
-//consultar un registro
-if (isGet() and getParam("action") == "get") {
-    $json = array();
+    if ($accion == "insertar") {
+        $nombre = $_POST["nombre"];
+        $telefono = $_POST["telefono"];
 
-    foreach (find($table, getParam("id")) as $contacto) {
-        $json["id"] = $contacto["id"];
-        $json["nombre"] = $contacto["nombre"];
-        $json["telefono"] = $contacto["telefono"];
-    }
-    
-    echo json_encode($json);
-}
+        if (insertar($nombre, $telefono) == true) {
+            $datos["estado"] = true;
+            $datos["resultado"] = "Registro realizado correctamente";
+        }else {
+            $datos["estado"] = false;
+            $datos["resultado"] = "No se pudo almacenar el contacto";
+        }
+    }else if ($accion == "listar") {
+        $filtro = (isset($_POST["filtro"])) ? $_POST["filtro"] : "";
+        $datos["estado"] = true;
+        $datos["resultado"] = listar($filtro);
+    }else if ($accion == "actualizar") {
+        $id = $_POST["id_contacto"];
+        $nombre = $_POST["nombre"];
+        $telefono = $_POST["telefono"];
 
-//guardar datos
-if (isPost() and getParam("action") == "save") {
-    //cargado datos a modelo
-    $columnas["nombre"] = getParam('nombre');
-    $columnas["telefono"] = getParam('telefono');
+        if (actualizar($id, $nombre, $telefono) == true) {
+            $datos["estado"] = true;
+            $datos["resultado"] = "Registro actualizado correctamente";
+        }else {
+            $datos["estado"] = false;
+            $datos["resultado"] = "No se pudo actualizar el contacto";
+        }
+    }else if ($accion == "eliminar") {
+        $id = $_POST["id_contacto"];
 
-    //creamos un nuevo array con las entradas filtradas
-    $data = filter_var_array($columnas, $filter);
+        if (eliminar($id) == true) {
+            $datos["estado"] = true;
+            $datos["resultado"] = "Registro eliminado correctamente";
+        }else {
+            $datos["estado"] = false;
+            $datos["resultado"] = "No se pudo eliminar el contacto";
+        }
+    } 
 
-    if (insert($table, $data) > 0) {
-        echo json_encode(array('token_save'=>true));
-    }else {
-        echo json_encode(array('token_save'=>false));
-    }
-}
-
-//Actualizar datos
-if (isPost() and getParam("action") == "update") {
-    //cargado datos a modelo
-    $columnas["id"] = getParam("id");
-    $columnas["nombre"] = getParam('nombre');
-    $columnas["telefono"] = getParam('telefono');
-
-    //creamos un nuevo array con las entradas filtradas
-    $data = filter_var_array($columnas, $filter);
-
-    if (update($table, $data) > 0) {
-        echo json_encode(array('token_update'=>true));
-    }else {
-        echo json_encode(array('token_update'=>false));
-    }
-}
-
-//Eliminar datos
-if (isGet() && getParam("action") == "delete") {   
-    if (delete($table, getParam("id")) > 0) {
-        echo json_encode(array('token_delete'=>true));
-    }else {
-        echo json_encode(array('token_delete'=>false));
-    }
-}
+    echo json_encode($datos);
+?> 
